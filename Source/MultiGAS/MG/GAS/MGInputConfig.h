@@ -28,10 +28,13 @@ class MULTIGAS_API UMGInputConfig : public UDataAsset
 	GENERATED_BODY()
 	
 public:
-	// 태그로 입력 액션을 찾는 헬퍼 함수
-	const UInputAction* FindAbilityInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
-	
 	// 에디터에서 입력 액션들을 리스트 형태로 등록함
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (TitleProperty = "InputTag"))
-	TArray<FMGInputAction> AbilityInputActions;
+	TArray<FMGInputAction> NativeInputActions;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<class UInputMappingContext> DefaultMappingContext;
+	
+	// 태그로 입력 액션을 찾는 헬퍼 함수
+	const UInputAction* FindNativeInputActionByTag(const FGameplayTag& InputTag) const;
 };

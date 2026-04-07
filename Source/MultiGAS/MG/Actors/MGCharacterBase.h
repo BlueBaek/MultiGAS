@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "MGCharacterBase.generated.h"
 
+class UMGInputConfig;
 struct FInputActionValue;
 
 UCLASS()
@@ -20,20 +21,21 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	
+	// 입력 설정을 위한 데이터 에셋 (에디터에서 할당)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="MG|Input")
+	TObjectPtr<UMGInputConfig> InputConfigDA;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MG|Components")
 	TObjectPtr<USkeletalMeshComponent> FPMesh;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MG|Components")
 	TObjectPtr<class UCameraComponent> FPCamera;
-
-	/** Called from Input Actions for movement input */
-	void MoveInput(const FInputActionValue& Value);
-
-	/** Called from Input Actions for looking input */
-	void LookInput(const FInputActionValue& Value);
 	
+	/** 입력 핸들러 함수 */
+	void MoveInput(const FInputActionValue& Value);
+	void LookInput(const FInputActionValue& Value);
 	void DoJumpStart();
-
 	void DoJumpEnd();
 };

@@ -3,10 +3,14 @@
 
 #include "MG/Actors/MGCharacterBase.h"
 
+#include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "MG/GAS/MGGameplayTags.h"
+#include "MG/GAS/MGInputComponent.h"
+#include "MG/GAS/MGInputConfig.h"
 
 // Sets default values
 AMGCharacterBase::AMGCharacterBase()
@@ -16,12 +20,16 @@ AMGCharacterBase::AMGCharacterBase()
 
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
-	
+
 	FPMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPerson Mesh"));
 	FPMesh->SetupAttachment(GetMesh());
 	FPMesh->SetOnlyOwnerSee(true);
 	FPMesh->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::FirstPerson;
 	FPMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// 컨트롤러의 회전 값을 캐릭터(Pawn)가 사용하도록 설정
+	bUseControllerRotationYaw = true; // 캐릭터가 좌우로 회전해야 함
+	bUseControllerRotationRoll = false;
 
 	FPCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPerson Camera"));
 	FPCamera->SetupAttachment(FPMesh, FName("head"));
@@ -49,34 +57,57 @@ void AMGCharacterBase::BeginPlay()
 	Super::BeginPlay();
 }
 
-// Called to bind functionality to input
-/*
 void AMGCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	ULocalPlayer* LocalPlayer = GetController<APlayerController>()->GetLocalPlayer();
+	checkf(LocalPlayer, TEXT("[MGCharacterBase] LocalPlayer Error!"));
+
+	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
+		UEnhancedInputLocalPlayerSubsystem>(LocalPlayer);
+	checkf(Subsystem, TEXT("[MGCharacterBase] No Subsystem!"));
+
+	Subsystem->AddMappingContext(InputConfigDA->DefaultMappingContext, 0);
+
+	UMGInputComponent* InputComp = CastChecked<UMGInputComponent>(PlayerInputComponent);
+
+	InputComp->BindNativeinputAction(InputConfigDA, MGGameplayTags::MG_Input_Move, ETriggerEvent::Triggered, this,
+	                                 &AMGCharacterBase::MoveInput);
+	InputComp->BindNativeinputAction(InputConfigDA, MGGameplayTags::MG_Input_Look, ETriggerEvent::Triggered, this,
+	                                 &AMGCharacterBase::LookInput);
+	InputComp->BindNativeinputAction(InputConfigDA, MGGameplayTags::MG_Input_Jump, ETriggerEvent::Started, this,
+	                                 &AMGCharacterBase::DoJumpStart);
+	InputComp->BindNativeinputAction(InputConfigDA, MGGameplayTags::MG_Input_Jump, ETriggerEvent::Completed, this,
+	                                 &AMGCharacterBase::DoJumpEnd);
 }
-*/
 
 void AMGCharacterBase::MoveInput(const FInputActionValue& Value)
 {
-	/*
-	FVector2D MovementVector = Value.Get<FVector2D>();
+	const FVector2D MovementVector = Value.Get<FVector2D>();
+	const FRotator MovementRotation(0.f, Controller->GetControlRotation().Yaw, 0.f);
 	if (GetController())
 	{
-		AddMovementInput(GetActorRightVector(), MovementVector.X);
-		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
+		AddMovementInput(MovementRotation.RotateVector(FVector::RightVector), MovementVector.X);
+		AddMovementInput(MovementRotation.RotateVector(FVector::ForwardVector), MovementVector.Y);
 	}
-	*/
 }
 
 void AMGCharacterBase::LookInput(const FInputActionValue& Value)
 {
+	const FVector2D LookAxisVector = Value.Get<FVector2D>();
+
+	if (GetController())
+	{
+		AddControllerYawInput(-LookAxisVector.X);
+		AddControllerPitchInput(LookAxisVector.Y);
+	}
 }
 
 void AMGCharacterBase::DoJumpStart()
 {
+	Jump();
 }
 
 void AMGCharacterBase::DoJumpEnd()
 {
+	StopJumping();
 }
